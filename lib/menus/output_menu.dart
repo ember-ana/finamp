@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cast_plus/cast.dart';
 import 'package:finamp/color_schemes.g.dart';
 import 'package:finamp/components/Buttons/cta_medium.dart';
 import 'package:finamp/components/Shortcuts/global_shortcut_manager.dart';
@@ -12,6 +13,7 @@ import 'package:finamp/l10n/app_localizations.dart';
 import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/services/feedback_helper.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
+import 'package:finamp/services/google_cast.dart';
 import 'package:finamp/services/music_player_background_task.dart';
 import 'package:finamp/services/queue_service.dart';
 import 'package:finamp/services/theme_provider.dart';
@@ -101,6 +103,17 @@ Future<void> showOutputMenu({required BuildContext context, bool usePlayerTheme 
               child: OutputTargetList(), // Pass the outputRoutes
             ),
           ),
+        SliverStickyHeader(
+          header: Padding(
+            padding: const EdgeInsets.only(top: 10.0, bottom: 8.0, left: 16.0, right: 16.0),
+            child: Text(
+              "Google Cast Devices",
+              // AppLocalizations.of(context)!.outputMenuGoogleCastSectionTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          sliver: MenuMask(height: OutputMenuHeader.defaultHeight, child: GoogleCastTargetList()),
+        ),
       ];
       // TODO better estimate, how to deal with lag getting playlists?
       var stackHeight = MediaQuery.heightOf(context) * (Platform.isAndroid ? 0.65 : 0.4);
@@ -248,6 +261,73 @@ class _OutputTargetListState extends State<OutputTargetList> {
         ],
       ),
     );
+  }
+}
+
+class GoogleCastTargetList extends StatefulWidget {
+  const GoogleCastTargetList({super.key});
+
+  @override
+  State<GoogleCastTargetList> createState() => _GoogleCastTargetListState();
+}
+
+class _GoogleCastTargetListState extends State<GoogleCastTargetList> {
+  final audioHandler = GetIt.instance<MusicPlayerBackgroundTask>();
+  final googleCast = GetIt.instance<GoogleCast>();
+  CastDevice? pendingDevice;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<CastDevice>>(
+      future: googleCast.search(),
+      builder: (context, discoverySnapshot) {
+        final devices = discoverySnapshot.data ?? [];
+
+        return SliverList.builder(
+          itemCount: devices.length,
+          itemBuilder: (context, index) {
+            final device = devices[index];
+            final isActive = googleCast.ready && (googleCast.device == device);
+
+            /* force pending device ID to null if currently playing */
+            if (isActive) pendingDevice = null;
+
+            final isPending = pendingDevice == device;
+            return ToggleableListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(16.0),
+                color: Theme.of(context).colorScheme.primary.withAlpha(76),
+                child: Icon(TablerIcons.cast),
+              ),
+              title: device.extras["fn"] ?? device.name, // friendly name
+              subtitle: device.extras["md"], // model
+              icon: isActive ? TablerIcons.device_speaker_filled : TablerIcons.device_speaker,
+              state: isActive,
+              isLoading: isPending,
+              enabled: !isPending,
+              onToggle: (bool currentState) async => _toggle(currentState, device),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _toggle(bool isActive, CastDevice device) async {
+    _update(device);
+    if (isActive) {
+      await googleCast.disconnect();
+    } else {
+      await googleCast.connect(device);
+      await googleCast.launch();
+    }
+    _update(null);
+  }
+
+  void _update(CastDevice? device) {
+    setState(() {
+      pendingDevice = device;
+    });
   }
 }
 

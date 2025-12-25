@@ -40,6 +40,7 @@ import 'package:finamp/services/feedback_helper.dart';
 import 'package:finamp/services/finamp_logs_helper.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
 import 'package:finamp/services/finamp_user_helper.dart';
+import 'package:finamp/services/google_cast.dart';
 import 'package:finamp/services/keep_screen_on_helper.dart';
 import 'package:finamp/services/network_manager.dart';
 import 'package:finamp/services/offline_listen_helper.dart';
@@ -142,6 +143,8 @@ void main() async {
     _mainLog.info("Setup audio player");
     await _setupKeepScreenOnHelper();
     _mainLog.info("Setup KeepScreenOnHelper");
+    await _setupGoogleCast();
+    _mainLog.info("Setup Google Cast");
     await _setupDiscordRpc();
     _mainLog.info("Setup Discord RPC");
   } catch (error, trace) {
@@ -256,6 +259,10 @@ Future<void> _setupPlayOnService() async {
   final playOnService = PlayOnService();
   GetIt.instance.registerSingleton(playOnService);
   GetIt.instance<FinampUserHelper>().runUserHook(playOnService.initialize);
+}
+
+Future<void> _setupGoogleCast() async {
+  GetIt.instance.registerSingleton(GoogleCast());
 }
 
 Future<void> _setupDiscordRpc() async {
