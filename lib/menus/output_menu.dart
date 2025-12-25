@@ -319,7 +319,6 @@ class _GoogleCastTargetListState extends State<GoogleCastTargetList> {
       await googleCast.disconnect();
     } else {
       await googleCast.connect(device);
-      await googleCast.launch();
     }
     _update(null);
   }

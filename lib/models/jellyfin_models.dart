@@ -153,6 +153,7 @@ class UserConfiguration {
     required this.rememberAudioSelections,
     required this.rememberSubtitleSelections,
     required this.enableNextEpisodeAutoPlay,
+    this.castReceiverId,
   });
 
   /// Gets or sets the audio language preference.
@@ -204,6 +205,9 @@ class UserConfiguration {
 
   @HiveField(14)
   bool enableNextEpisodeAutoPlay;
+
+  @HiveField(15)
+  String? castReceiverId;
 
   factory UserConfiguration.fromJson(Map<String, dynamic> json) => _$UserConfigurationFromJson(json);
   Map<String, dynamic> toJson() => _$UserConfigurationToJson(this);

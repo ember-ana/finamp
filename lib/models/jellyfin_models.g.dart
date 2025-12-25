@@ -110,13 +110,14 @@ class UserConfigurationAdapter extends TypeAdapter<UserConfiguration> {
       rememberAudioSelections: fields[12] as bool,
       rememberSubtitleSelections: fields[13] as bool,
       enableNextEpisodeAutoPlay: fields[14] as bool,
+      castReceiverId: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserConfiguration obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.audioLanguagePreference)
       ..writeByte(1)
@@ -146,7 +147,9 @@ class UserConfigurationAdapter extends TypeAdapter<UserConfiguration> {
       ..writeByte(13)
       ..write(obj.rememberSubtitleSelections)
       ..writeByte(14)
-      ..write(obj.enableNextEpisodeAutoPlay);
+      ..write(obj.enableNextEpisodeAutoPlay)
+      ..writeByte(15)
+      ..write(obj.castReceiverId);
   }
 
   @override
@@ -3060,6 +3063,7 @@ UserConfiguration _$UserConfigurationFromJson(Map json) => UserConfiguration(
   rememberAudioSelections: json['RememberAudioSelections'] as bool,
   rememberSubtitleSelections: json['RememberSubtitleSelections'] as bool,
   enableNextEpisodeAutoPlay: json['EnableNextEpisodeAutoPlay'] as bool,
+  castReceiverId: json['CastReceiverId'] as String?,
 );
 
 Map<String, dynamic> _$UserConfigurationToJson(UserConfiguration instance) =>
@@ -3079,6 +3083,7 @@ Map<String, dynamic> _$UserConfigurationToJson(UserConfiguration instance) =>
       'RememberAudioSelections': instance.rememberAudioSelections,
       'RememberSubtitleSelections': instance.rememberSubtitleSelections,
       'EnableNextEpisodeAutoPlay': instance.enableNextEpisodeAutoPlay,
+      'CastReceiverId': instance.castReceiverId,
     };
 
 UserPolicy _$UserPolicyFromJson(Map json) => UserPolicy(
