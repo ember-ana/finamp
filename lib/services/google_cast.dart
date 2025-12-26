@@ -9,7 +9,9 @@ import 'package:finamp/services/jellyfin_api_helper.dart';
 import 'package:get_it/get_it.dart';
 import 'package:logging/logging.dart';
 
+// https://github.com/jellyfin/jellyfin/blob/0e73a56a457cd5b91673da2e42304066aadffbdb/Jellyfin.Server/Migrations/Routines/AddDefaultCastReceivers.cs#L29
 const defaultCastAppId = "F007D354";
+// https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L526
 const messageNamespace = "urn:x-cast:com.connectsdk";
 const ticksPerSecond =
     10000000; // ref: https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/helpers.ts#L43
@@ -117,14 +119,18 @@ class GoogleCast {
 
   Future<void> _launch() async {
     _log("Launching app $_appId");
+    // https://docs.rs/crate/gcast/0.1.5/source/PROTOCOL.md#314
     sendControlMessage("LAUNCH", {"appId": _appId});
 
     await for (GoogleCastPayload payload in _session!.messageStream) {
       switch (payload["type"]) {
+        // https://docs.rs/crate/gcast/0.1.5/source/PROTOCOL.md#328
         case "LAUNCH_ERROR":
           final reason = payload["reason"] as String;
           _logger.warning("Failed to launch application: $reason");
           throw reason;
+        // https://docs.rs/crate/gcast/0.1.5/source/PROTOCOL.md#323
+        // https://docs.rs/crate/gcast/0.1.5/source/PROTOCOL.md#290
         case "RECEIVER_STATUS":
           final apps = payload["status"]?["applications"] as List<dynamic>? ?? [];
           for (final app in apps) {
@@ -198,7 +204,8 @@ class GoogleCast {
     return ready && _device == device;
   }
 
-  // https://github.com/jellyfin/jellyfin-web/blob/948d792677b62ac5afe28813fed827c5e24b7090/src/plugins/chromecastPlayer/plugin.js#L323
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L525
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L285
   void sendMessage(String command, [GoogleCastPayload options = const {}]) {
     if (!ready) {
       _logger.warning("Failed to send message: not ready");
@@ -211,6 +218,7 @@ class GoogleCast {
      */
     final user = _finampUserHelper.currentUser!;
 
+    // https://github.com/jellyfin/jellyfin-web/blob/948d792677b62ac5afe28813fed827c5e24b7090/src/plugins/chromecastPlayer/plugin.js#L323
     GoogleCastPayload payload = {
       "command": command,
       "options": options,
@@ -235,7 +243,7 @@ class GoogleCast {
     _session!.sendMessage(namespace, payload);
   }
 
-  // 0 = muted
+  // https://docs.rs/crate/gcast/0.1.5/source/PROTOCOL.md#367
   void mute() {
     return _setVolume(GoogleCastReceiverVolume(muted: true));
   }
@@ -283,66 +291,81 @@ class GoogleCast {
 
      ! volume is special and handled by google cast, not the receiver app,
        so the impl for those is above
+       https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L117
    */
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L137
   void identify() {
     return sendMessage("Identify");
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L61
   void playNow(List<GoogleCastMediaItem> items) {
     return _loadMedia("PlayNow", items);
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L57
   void playNext(List<GoogleCastMediaItem> items) {
     return _loadMedia("PlayNext", items);
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L65
   void playLast(List<GoogleCastMediaItem> items) {
     return _loadMedia("PlayLast", items);
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L69
   void shuffle(GoogleCastMediaItem item) {
     return _loadMedia("Shuffle", [item]);
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L77
   void instantMix(GoogleCastMediaItem item) {
     return _loadMedia("InstantMix", [item]);
   }
 
   void _loadMedia(String command, List<GoogleCastMediaItem> items) {
-    return sendMessage(command, {"items": items.map((item) => item.toJson())});
+    return sendMessage(command, {"items": items});
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L155
   void seek(double seconds) {
     /* this might be wrong? the ticks per second thing is weird
        https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L155 */
     return sendMessage("Seek", {"position": seconds});
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L187
   void pause() {
     return sendMessage("Pause");
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L196
   void unpause() {
     return sendMessage("Unpause");
   }
 
-  void playPause() {
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L176
+  void togglePause() {
     return sendMessage("PlayPause");
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L172
   void stop() {
     return sendMessage("Stop");
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L91
   void nextTrack() {
     return sendMessage("NextTrack");
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L97
   void previousTrack() {
     return sendMessage("PreviousTrack");
   }
 
+  // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L191
   void setRepeatMode(RepeatMode repeatMode) {
     return sendMessage("SetRepeatMode", {"RepeatMode": repeatMode.jellyfinName});
   }
