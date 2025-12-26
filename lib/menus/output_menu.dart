@@ -287,7 +287,7 @@ class _GoogleCastTargetListState extends State<GoogleCastTargetList> {
           itemCount: devices.length,
           itemBuilder: (context, index) {
             final device = devices[index];
-            final isActive = googleCast.ready && (googleCast.device == device);
+            final isActive = googleCast.isReadyOn(device);
 
             /* force pending device ID to null if currently playing */
             if (isActive) pendingDevice = null;
@@ -299,8 +299,8 @@ class _GoogleCastTargetListState extends State<GoogleCastTargetList> {
                 color: Theme.of(context).colorScheme.primary.withAlpha(76),
                 child: Icon(TablerIcons.cast),
               ),
-              title: device.extras["fn"] ?? device.name, // friendly name
-              subtitle: device.extras["md"], // model
+              title: device.friendlyName,
+              subtitle: device.model,
               icon: isActive ? TablerIcons.device_speaker_filled : TablerIcons.device_speaker,
               state: isActive,
               isLoading: isPending,

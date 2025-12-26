@@ -106,34 +106,70 @@ class CastMediaItem {
   }
 }
 
-class GoogleCast {
-  final CastSessionManager sessionManager = CastSessionManager();
-  final Logger _logger = Logger("GoogleCast");
-  String? appId;
-  String? senderDeviceId;
-  CastDevice? device;
-  CastSession? session;
-  PublicSystemInfoResult? serverInfo;
+class CastReceiverVolume {
+  const CastReceiverVolume({this.level, this.muted});
+  final double? level;
+  final bool? muted;
+  // ignored: stepInterval, controlType
 
-  bool get ready => session?.state == CastSessionState.connected;
-
-  Future<List<CastDevice>> search() async {
-    return CastDiscoveryService().search();
+  CastMessagePayload toPayload() {
+    CastMessagePayload payload = {};
+    if (level != null) payload["level"] = level;
+    if (muted != null) payload["level"] = muted;
+    return payload;
   }
+}
+
+class CastReceiverStatus {
+  const CastReceiverStatus({required this.volume});
+
+  /* null-safety: volume is always present
+     src: https://docs.rs/crate/gcast/0.1.5/source/PROTOCOL.md#256 */
+  CastReceiverStatus.fromPayload(CastMessagePayload payload)
+    : this(
+        volume: CastReceiverVolume(
+          level: payload["volume"]!["level"] as double,
+          muted: payload["volume"]!["muted"] as bool,
+        ),
+      );
+
+  final CastReceiverVolume volume;
+}
+
+extension GoogleCastDevice on CastDevice {
+  String get friendlyName => extras["fn"] ?? name;
+  String? get model => extras["md"];
+  String get id => serviceName;
+}
+
+class GoogleCast {
+  final CastSessionManager _sessionManager = CastSessionManager();
+  final Logger _logger = Logger("GoogleCast");
+  String? _appId;
+  String? _senderDeviceId;
+  CastDevice? _device;
+  CastSession? _session;
+  PublicSystemInfoResult? _serverInfo;
+  Stream<CastMessagePayload>? _messageStream;
+  Stream<CastReceiverStatus>? _receiverStatusStream;
+
+  bool get ready => _session?.state == CastSessionState.connected;
+
+  Future<List<CastDevice>> search() async => CastDiscoveryService().search();
 
   Future<void> connect(CastDevice targetDevice) async {
     Future<void> ensureServerInfo() async {
-      serverInfo ??= await _jellyfinApiHelper.loadServerPublicInfo();
+      _serverInfo ??= await _jellyfinApiHelper.loadServerPublicInfo();
     }
 
     Future<void> ensureDeviceId() async {
-      senderDeviceId ??= await getDeviceInfo().then((info) => info.id);
+      _senderDeviceId ??= await getDeviceInfo().then((info) => info.id);
     }
 
     Future<void> ensureAppId() async {
-      if (appId == null) {
+      if (_appId == null) {
         final userInfo = await _jellyfinApiHelper.getUser();
-        appId = userInfo.configuration?.castReceiverId ?? defaultCastAppId;
+        _appId = userInfo.configuration?.castReceiverId ?? defaultCastAppId;
       }
     }
 
@@ -153,8 +189,8 @@ class GoogleCast {
   }
 
   Future<void> _acquireSession(CastDevice targetDevice) async {
-    if (session != null) {
-      if (targetDevice == device && ready) {
+    if (_session != null) {
+      if (targetDevice == _device && ready) {
         _log("Reusing existing session");
         return;
       }
@@ -162,32 +198,50 @@ class GoogleCast {
     }
 
     _log("Connecting");
-    session = await sessionManager.startSession(targetDevice);
-    device = targetDevice;
+    _session = await _sessionManager.startSession(targetDevice);
+    _device = targetDevice;
 
-    session!.messageStream.listen((message) {
-      _logger.finest("<-- $message");
-    });
+    Stream<CastMessagePayload> setupMessageStream(CastSession session) {
+      session.messageStream.listen((message) {
+        _logger.finest("<-- $message");
+      });
+
+      return session.messageStream;
+    }
+
+    Stream<CastReceiverStatus> setupReceiverStatusStream(CastSession session) async* {
+      await for (final payload in session.messageStream) {
+        if (payload["type"] != "RECEIVER_STATUS") continue;
+
+        yield CastReceiverStatus.fromPayload(payload["status"] as CastMessagePayload? ?? {});
+      }
+    }
+
+    void setupStateStream(CastSession session) {
+      final subscription = session.stateStream.listen((state) {
+        _logger.finest("Session: $state");
+      }, cancelOnError: true);
+      subscription.onError((Object error) {
+        _logger.warning("Session errored: $error");
+        _disconnected();
+      });
+      subscription.onDone(() {
+        _log("Session ended");
+        _disconnected();
+      });
+    }
+
+    _messageStream = setupMessageStream(_session!);
+    _receiverStatusStream = setupReceiverStatusStream(_session!);
+    setupStateStream(_session!);
     _log("Connected");
-
-    final subscription = session!.stateStream.listen((state) {
-      _logger.finest("Session: $state");
-    }, cancelOnError: true);
-    subscription.onError((Object error) {
-      _logger.warning("Session errored: $error");
-      _disconnected();
-    });
-    subscription.onDone(() {
-      _log("Session ended");
-      _disconnected();
-    });
   }
 
   Future<void> _launch() async {
-    _log("Launching app $appId");
-    sendControlMessage("LAUNCH", {"appId": appId});
+    _log("Launching app $_appId");
+    sendControlMessage("LAUNCH", {"appId": _appId});
 
-    await for (CastMessagePayload payload in session!.messageStream) {
+    await for (CastMessagePayload payload in _session!.messageStream) {
       switch (payload["type"]) {
         case "LAUNCH_ERROR":
           final reason = payload["reason"] as String;
@@ -196,8 +250,8 @@ class GoogleCast {
         case "RECEIVER_STATUS":
           final apps = payload["status"]?["applications"] as List<dynamic>? ?? [];
           for (final app in apps) {
-            if (app["appId"] == appId) {
-              _log("Launched app $appId");
+            if (app["appId"] == _appId) {
+              _log("Launched app $_appId");
               return;
             }
           }
@@ -206,17 +260,37 @@ class GoogleCast {
   }
 
   Future<void> disconnect() async {
-    if (session == null) return;
-    final sessionId = session!.sessionId;
+    if (_session == null) return;
+    final sessionId = _session!.sessionId;
     _log("Disconnecting");
-    await sessionManager.endSession(sessionId);
+    await _sessionManager.endSession(sessionId);
     _disconnected();
   }
 
   void _disconnected() {
-    session = null;
-    device = null;
+    _receiverStatusStream = null;
+    _messageStream = null;
+    _session = null;
+    _device = null;
     _log("Disconnected");
+  }
+
+  Stream<CastMessagePayload> subscribeTo(String type) {
+    if (_messageStream == null) throw "NOT_READY";
+
+    return _messageStream!
+        .where((payload) => payload["type"] == type)
+        .map((payload) => payload["data"] as CastMessagePayload? ?? const {});
+  }
+
+  // null-safety: the volume in this stream will always have all fields set
+  Stream<CastReceiverVolume> subscribeVolume() {
+    if (_receiverStatusStream == null) throw "NOT_READY";
+    return _receiverStatusStream!.map((payload) => payload.volume);
+  }
+
+  bool isReadyOn(CastDevice device) {
+    return ready && _device == device;
   }
 
   // https://github.com/jellyfin/jellyfin-web/blob/948d792677b62ac5afe28813fed827c5e24b7090/src/plugins/chromecastPlayer/plugin.js#L323
@@ -236,12 +310,12 @@ class GoogleCast {
       "command": command,
       "options": options,
       "userId": user.id,
-      "deviceId": senderDeviceId,
+      "deviceId": _senderDeviceId,
       "accessToken": user.accessToken,
       "serverAddress": user.publicAddress,
       "serverId": user.serverId,
-      "serverVersion": serverInfo!.version,
-      "receiverName": device!.extras["fn"] ?? device!.name,
+      "serverVersion": _serverInfo!.version,
+      "receiverName": _device!.extras["fn"] ?? _device!.name,
     };
 
     _sendMessage(messageNamespace, payload);
@@ -253,31 +327,24 @@ class GoogleCast {
 
   void _sendMessage(String namespace, CastMessagePayload payload) {
     _logger.finest("--> [$namespace]: $payload");
-    session!.sendMessage(namespace, payload);
+    _session!.sendMessage(namespace, payload);
   }
 
   // 0 = muted
   void mute() {
-    return _setVolume(muted: true);
+    return _setVolume(CastReceiverVolume(muted: true));
   }
 
   void unmute([double? volumeLevel]) {
-    return _setVolume(muted: false, level: volumeLevel);
+    return _setVolume(CastReceiverVolume(muted: false, level: volumeLevel));
   }
 
   void setVolume(double level) {
-    return _setVolume(level: level);
+    return _setVolume(CastReceiverVolume(level: level));
   }
 
-  void _setVolume({bool? muted, double? level}) {
-    CastMessagePayload payload = {};
-
-    if (muted != null) {
-      payload["muted"] = muted;
-    }
-    if (level != null) {
-      payload["level"] = level;
-    }
+  void _setVolume(CastReceiverVolume volume) {
+    final payload = volume.toPayload();
     if (payload.isEmpty) return;
 
     return sendControlMessage("SET_VOLUME", {"volume": payload});
@@ -386,6 +453,6 @@ class GoogleCast {
   }
 
   void _log(String message) {
-    _logger.fine('[${session?.sessionId} on "${device?.name}"]: $message');
+    _logger.fine('[${_session?.sessionId} on "${_device?.name}"]: $message');
   }
 }
