@@ -68,7 +68,7 @@ Future<(List<BaseItemDto>, CuratedItemSelectionType, Set<CuratedItemSelectionTyp
         sortOrder: SortOrder.descending.name,
         isFavorite: (selectionType == CuratedItemSelectionType.favorites) ? true : null,
         limit: 5,
-        includeItemTypes: [BaseItemDtoType.track.jellyfinName].join(","),
+        includeItemTypes: [BaseItemDtoType.track.baseItemKind].join(","),
       );
       // For everything except Favorites we can re-use the data from the other provider
       // The other provider would not limit the favorites but run a separate call anyway
@@ -90,7 +90,7 @@ Future<(List<BaseItemDto>, CuratedItemSelectionType, Set<CuratedItemSelectionTyp
               sortOrder: SortOrder.descending.name,
               isFavorite: true,
               limit: 5,
-              includeItemTypes: [BaseItemDtoType.track.jellyfinName].join(","),
+              includeItemTypes: [BaseItemDtoType.track.baseItemKind].join(","),
             );
 
       final Map<String, BaseItemDto> distinctMap = {
@@ -180,7 +180,7 @@ Future<List<BaseItemDto>> getArtistAlbums(
       genreFilter: genreFilter,
       sortBy: sortBy.jellyfinName(TabContentType.albums),
       sortOrder: sortOrder.name,
-      includeItemTypes: [BaseItemDtoType.album.jellyfinName].join(","),
+      includeItemTypes: [BaseItemDtoType.album.baseItemKind].join(","),
       artistType: ArtistType.albumArtist,
     );
     return artistAlbums ?? [];
@@ -226,7 +226,7 @@ Future<List<BaseItemDto>> getPerformingArtistAlbums(
       genreFilter: genreFilter,
       sortBy: sortBy.jellyfinName(TabContentType.albums),
       sortOrder: sortOrder.name,
-      includeItemTypes: [BaseItemDtoType.album.jellyfinName].join(","),
+      includeItemTypes: [BaseItemDtoType.album.baseItemKind].join(","),
       artistType: ArtistType.artist,
     );
     return performingArtistAlbums ?? [];
@@ -278,7 +278,7 @@ Future<List<BaseItemDto>> getPerformingArtistTracks(
       parentItem: artist,
       genreFilter: genreFilter,
       sortBy: SortBy.premiereDate.jellyfinName(TabContentType.tracks),
-      includeItemTypes: [BaseItemDtoType.track.jellyfinName].join(","),
+      includeItemTypes: [BaseItemDtoType.track.baseItemKind].join(","),
       artistType: ArtistType.artist,
       isFavorite: (onlyFavorites == true) ? true : null,
     );
@@ -338,7 +338,7 @@ Future<List<BaseItemDto>> getArtistTracks(
       parentItem: artist,
       genreFilter: genreFilter,
       sortBy: SortBy.premiereDate.jellyfinName(TabContentType.tracks),
-      includeItemTypes: [BaseItemDtoType.track.jellyfinName].join(","),
+      includeItemTypes: [BaseItemDtoType.track.baseItemKind].join(","),
       artistType: ArtistType.albumArtist,
     );
     // Get all performing artist tracks

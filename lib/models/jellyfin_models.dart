@@ -498,7 +498,7 @@ class SessionInfo {
 
   /// Gets or sets the playable media types.
   @HiveField(4)
-  List<String>? playableMediaTypes;
+  List<MediaType>? playableMediaTypes;
 
   @HiveField(5)
   String? playlistItemId;
@@ -705,9 +705,9 @@ class PlayerStateInfo {
   @HiveField(8)
   String? playMethod;
 
-  /// Enum: "RepeatNone" "RepeatAll" "RepeatOne" Gets or sets the repeat mode.
+  /// Gets or sets the repeat mode.
   @HiveField(9)
-  String? repeatMode;
+  RepeatMode? repeatMode;
 
   factory PlayerStateInfo.fromJson(Map<String, dynamic> json) => _$PlayerStateInfoFromJson(json);
   Map<String, dynamic> toJson() => _$PlayerStateInfoToJson(this);
@@ -744,7 +744,7 @@ class ClientCapabilities {
   });
 
   @HiveField(0)
-  List<String>? playableMediaTypes;
+  List<MediaType>? playableMediaTypes;
 
   @HiveField(1)
   List<String>? supportedCommands;
@@ -1684,7 +1684,7 @@ class BaseItemDto with RunTimeTickDuration implements PlayableItem {
 
   /// Gets or sets the type.
   @HiveField(48)
-  String? type;
+  BaseItemKind? type;
 
   /// Gets or sets the people.
   @HiveField(49)
@@ -1877,7 +1877,7 @@ class BaseItemDto with RunTimeTickDuration implements PlayableItem {
 
   /// Gets or sets the type of the media.
   @HiveField(95)
-  String? mediaType;
+  MediaType? mediaType;
 
   /// Gets or sets the end date.
   @HiveField(96)
@@ -2229,6 +2229,126 @@ class BaseItemDto with RunTimeTickDuration implements PlayableItem {
 
   @override
   int get hashCode => id.hashCode;
+}
+
+// https://typescript-sdk.jellyfin.org/enums/generated-client.MediaType.html
+@JsonEnum(valueField: "jellyfinName")
+@HiveType(typeId: 111)
+enum MediaType {
+  @HiveField(0)
+  unknown("Unknown"),
+  @HiveField(1)
+  audio("Audio"),
+  @HiveField(2)
+  book("Book"),
+  @HiveField(3)
+  photo("Photo"),
+  @HiveField(4)
+  video("Video");
+
+  const MediaType(this.jellyfinName);
+
+  final String jellyfinName;
+}
+
+// https://typescript-sdk.jellyfin.org/enums/generated-client.RepeatMode.html
+@JsonEnum(valueField: "jellyfinName")
+@HiveType(typeId: 112)
+enum RepeatMode {
+  @HiveField(0)
+  repeatNone("RepeatNone"),
+  @HiveField(1)
+  repeatAll("RepeatAll"),
+  @HiveField(2)
+  repeatOne("RepeatOne");
+
+  const RepeatMode(this.jellyfinName);
+
+  final String jellyfinName;
+}
+
+// https://typescript-sdk.jellyfin.org/enums/generated-client.BaseItemKind.html
+@JsonEnum(valueField: "jellyfinName")
+@HiveType(typeId: 113)
+enum BaseItemKind {
+  @HiveField(0)
+  aggregateFolder("AggregateFolder"),
+  @HiveField(1)
+  audio("Audio"),
+  @HiveField(2)
+  audioBook("AudioBook"),
+  @HiveField(3)
+  basePluginFolder("BasePluginFolder"),
+  @HiveField(4)
+  book("Book"),
+  @HiveField(5)
+  boxSet("BoxSet"),
+  @HiveField(6)
+  channel("Channel"),
+  @HiveField(7)
+  channelFolderItem("ChannelFolderItem"),
+  @HiveField(8)
+  collectionFolder("CollectionFolder"),
+  @HiveField(9)
+  episode("Episode"),
+  @HiveField(10)
+  folder("Folder"),
+  @HiveField(11)
+  genre("Genre"),
+  @HiveField(12)
+  liveTvChannel("LiveTvChannel"),
+  @HiveField(13)
+  liveTvProgram("LiveTvProgram"),
+  @HiveField(14)
+  manualPlaylistsFolder("ManualPlaylistsFolder"),
+  @HiveField(15)
+  movie("Movie"),
+  @HiveField(16)
+  musicAlbum("MusicAlbum"),
+  @HiveField(17)
+  musicArtist("MusicArtist"),
+  @HiveField(18)
+  musicGenre("MusicGenre"),
+  @HiveField(19)
+  musicVideo("MusicVideo"),
+  @HiveField(20)
+  person("Person"),
+  @HiveField(21)
+  photo("Photo"),
+  @HiveField(22)
+  photoAlbum("PhotoAlbum"),
+  @HiveField(23)
+  playlist("Playlist"),
+  @HiveField(24)
+  playlistsFolder("PlaylistsFolder"),
+  @HiveField(25)
+  program("Program"),
+  @HiveField(26)
+  recording("Recording"),
+  @HiveField(27)
+  season("Season"),
+  @HiveField(28)
+  series("Series"),
+  @HiveField(29)
+  studio("Studio"),
+  @HiveField(30)
+  trailer("Trailer"),
+  @HiveField(31)
+  tvChannel("TvChannel"),
+  @HiveField(32)
+  tvProgram("TvProgram"),
+  @HiveField(33)
+  userRootFolder("UserRootFolder"),
+  @HiveField(34)
+  userView("UserView"),
+  @HiveField(35)
+  video("Video"),
+  @HiveField(36)
+  year("Year");
+
+  const BaseItemKind(this.jellyfinName);
+
+  final String jellyfinName;
 }
 
 @JsonSerializable(fieldRename: FieldRename.pascal, explicitToJson: true, anyMap: true)
@@ -2998,9 +3118,8 @@ class PlaybackProgressInfo {
   /// Gets or sets the play session identifier.
   String? playSessionId;
 
-  /// Enum: "RepeatNone" "RepeatAll" "RepeatOne"
   /// Gets or sets the repeat mode.
-  String repeatMode;
+  RepeatMode repeatMode;
 
   List<QueueItem>? nowPlayingQueue;
 
@@ -3208,7 +3327,7 @@ class NewPlaylist {
   String? userId;
 
   /// Gets or sets the media type.
-  String? mediaType;
+  MediaType? mediaType;
 
   /// Whether the playlist should be publicly visible
   bool? isPublic;

@@ -126,7 +126,7 @@ class _LoginFlowState extends State<LoginFlow> {
                       ClientCapabilities(
                         supportsMediaControl: true,
                         supportsPersistentIdentifier: true,
-                        playableMediaTypes: ["Audio"],
+                        playableMediaTypes: [MediaType.audio],
                         supportedCommands: [
                           "MoveUp",
                           "MoveDown",

@@ -68,7 +68,7 @@ class DownloadDialog extends ConsumerStatefulWidget {
         (needTranscode || trackCount == null)) {
       children = await jellyfinApiHelper.getItems(
         parentItem: item.baseItem!,
-        includeItemTypes: BaseItemDtoType.track.jellyfinName,
+        includeItemTypes: BaseItemDtoType.track.baseItemKind?.jellyfinName,
         fields: "${jellyfinApiHelper.defaultFields},MediaSources,MediaStreams",
       );
       trackCount = children?.length;
@@ -77,7 +77,7 @@ class DownloadDialog extends ConsumerStatefulWidget {
       // Only track children are expected by dialog, so do not save album children.
       List<BaseItemDto>? artistChildren = await jellyfinApiHelper.getItems(
         parentItem: item.baseItem!,
-        includeItemTypes: BaseItemDtoType.album.jellyfinName,
+        includeItemTypes: BaseItemDtoType.album.baseItemKind?.jellyfinName,
       );
       trackCount = artistChildren?.fold<int>(0, (count, item) => count + (item.childCount ?? 0));
     } else if (item.baseItemType == BaseItemDtoType.track) {

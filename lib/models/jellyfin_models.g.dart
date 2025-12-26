@@ -415,7 +415,7 @@ class SessionInfoAdapter extends TypeAdapter<SessionInfo> {
       additionalUsers: (fields[1] as List?)?.cast<SessionUserInfo>(),
       capabilities: fields[2] as ClientCapabilities?,
       remoteEndPoint: fields[3] as String?,
-      playableMediaTypes: (fields[4] as List?)?.cast<String>(),
+      playableMediaTypes: (fields[4] as List?)?.cast<MediaType>(),
       playlistItemId: fields[5] as String?,
       id: fields[6] as String?,
       serverId: fields[7] as String?,
@@ -535,7 +535,7 @@ class PlayerStateInfoAdapter extends TypeAdapter<PlayerStateInfo> {
       subtitleStreamIndex: (fields[6] as num?)?.toInt(),
       mediaSourceId: fields[7] as String?,
       playMethod: fields[8] as String?,
-      repeatMode: fields[9] as String?,
+      repeatMode: fields[9] as RepeatMode?,
     );
   }
 
@@ -624,7 +624,7 @@ class ClientCapabilitiesAdapter extends TypeAdapter<ClientCapabilities> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return ClientCapabilities(
-      playableMediaTypes: (fields[0] as List?)?.cast<String>(),
+      playableMediaTypes: (fields[0] as List?)?.cast<MediaType>(),
       supportedCommands: (fields[1] as List?)?.cast<String>(),
       supportsMediaControl: fields[2] as bool?,
       supportsPersistentIdentifier: fields[3] as bool?,
@@ -1286,7 +1286,7 @@ class BaseItemDtoAdapter extends TypeAdapter<BaseItemDto> {
       providerIds: (fields[45] as Map?)?.cast<String, dynamic>(),
       isFolder: fields[46] as bool?,
       parentId: fields[47] as BaseItemId?,
-      type: fields[48] as String?,
+      type: fields[48] as BaseItemKind?,
       people: (fields[49] as List?)?.cast<BaseItemPerson>(),
       studios: (fields[50] as List?)?.cast<NameLongIdPair>(),
       genreItems: (fields[51] as List?)?.cast<NameLongIdPair>(),
@@ -1333,7 +1333,7 @@ class BaseItemDtoAdapter extends TypeAdapter<BaseItemDto> {
       parentPrimaryImageTag: fields[92] as String?,
       chapters: (fields[93] as List?)?.cast<ChapterInfo>(),
       locationType: fields[94] as String?,
-      mediaType: fields[95] as String?,
+      mediaType: fields[95] as MediaType?,
       endDate: fields[96] as String?,
       lockedFields: (fields[97] as List?)?.cast<String>(),
       lockData: fields[98] as bool?,
@@ -2864,6 +2864,273 @@ class DlnaProfileTypeAdapter extends TypeAdapter<DlnaProfileType> {
           typeId == other.typeId;
 }
 
+class MediaTypeAdapter extends TypeAdapter<MediaType> {
+  @override
+  final typeId = 111;
+
+  @override
+  MediaType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return MediaType.unknown;
+      case 1:
+        return MediaType.audio;
+      case 2:
+        return MediaType.book;
+      case 3:
+        return MediaType.photo;
+      case 4:
+        return MediaType.video;
+      default:
+        return MediaType.unknown;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, MediaType obj) {
+    switch (obj) {
+      case MediaType.unknown:
+        writer.writeByte(0);
+      case MediaType.audio:
+        writer.writeByte(1);
+      case MediaType.book:
+        writer.writeByte(2);
+      case MediaType.photo:
+        writer.writeByte(3);
+      case MediaType.video:
+        writer.writeByte(4);
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MediaTypeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class RepeatModeAdapter extends TypeAdapter<RepeatMode> {
+  @override
+  final typeId = 112;
+
+  @override
+  RepeatMode read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return RepeatMode.repeatNone;
+      case 1:
+        return RepeatMode.repeatAll;
+      case 2:
+        return RepeatMode.repeatOne;
+      default:
+        return RepeatMode.repeatNone;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, RepeatMode obj) {
+    switch (obj) {
+      case RepeatMode.repeatNone:
+        writer.writeByte(0);
+      case RepeatMode.repeatAll:
+        writer.writeByte(1);
+      case RepeatMode.repeatOne:
+        writer.writeByte(2);
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RepeatModeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class BaseItemKindAdapter extends TypeAdapter<BaseItemKind> {
+  @override
+  final typeId = 113;
+
+  @override
+  BaseItemKind read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return BaseItemKind.aggregateFolder;
+      case 1:
+        return BaseItemKind.audio;
+      case 2:
+        return BaseItemKind.audioBook;
+      case 3:
+        return BaseItemKind.basePluginFolder;
+      case 4:
+        return BaseItemKind.book;
+      case 5:
+        return BaseItemKind.boxSet;
+      case 6:
+        return BaseItemKind.channel;
+      case 7:
+        return BaseItemKind.channelFolderItem;
+      case 8:
+        return BaseItemKind.collectionFolder;
+      case 9:
+        return BaseItemKind.episode;
+      case 10:
+        return BaseItemKind.folder;
+      case 11:
+        return BaseItemKind.genre;
+      case 12:
+        return BaseItemKind.liveTvChannel;
+      case 13:
+        return BaseItemKind.liveTvProgram;
+      case 14:
+        return BaseItemKind.manualPlaylistsFolder;
+      case 15:
+        return BaseItemKind.movie;
+      case 16:
+        return BaseItemKind.musicAlbum;
+      case 17:
+        return BaseItemKind.musicArtist;
+      case 18:
+        return BaseItemKind.musicGenre;
+      case 19:
+        return BaseItemKind.musicVideo;
+      case 20:
+        return BaseItemKind.person;
+      case 21:
+        return BaseItemKind.photo;
+      case 22:
+        return BaseItemKind.photoAlbum;
+      case 23:
+        return BaseItemKind.playlist;
+      case 24:
+        return BaseItemKind.playlistsFolder;
+      case 25:
+        return BaseItemKind.program;
+      case 26:
+        return BaseItemKind.recording;
+      case 27:
+        return BaseItemKind.season;
+      case 28:
+        return BaseItemKind.series;
+      case 29:
+        return BaseItemKind.studio;
+      case 30:
+        return BaseItemKind.trailer;
+      case 31:
+        return BaseItemKind.tvChannel;
+      case 32:
+        return BaseItemKind.tvProgram;
+      case 33:
+        return BaseItemKind.userRootFolder;
+      case 34:
+        return BaseItemKind.userView;
+      case 35:
+        return BaseItemKind.video;
+      case 36:
+        return BaseItemKind.year;
+      default:
+        return BaseItemKind.aggregateFolder;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, BaseItemKind obj) {
+    switch (obj) {
+      case BaseItemKind.aggregateFolder:
+        writer.writeByte(0);
+      case BaseItemKind.audio:
+        writer.writeByte(1);
+      case BaseItemKind.audioBook:
+        writer.writeByte(2);
+      case BaseItemKind.basePluginFolder:
+        writer.writeByte(3);
+      case BaseItemKind.book:
+        writer.writeByte(4);
+      case BaseItemKind.boxSet:
+        writer.writeByte(5);
+      case BaseItemKind.channel:
+        writer.writeByte(6);
+      case BaseItemKind.channelFolderItem:
+        writer.writeByte(7);
+      case BaseItemKind.collectionFolder:
+        writer.writeByte(8);
+      case BaseItemKind.episode:
+        writer.writeByte(9);
+      case BaseItemKind.folder:
+        writer.writeByte(10);
+      case BaseItemKind.genre:
+        writer.writeByte(11);
+      case BaseItemKind.liveTvChannel:
+        writer.writeByte(12);
+      case BaseItemKind.liveTvProgram:
+        writer.writeByte(13);
+      case BaseItemKind.manualPlaylistsFolder:
+        writer.writeByte(14);
+      case BaseItemKind.movie:
+        writer.writeByte(15);
+      case BaseItemKind.musicAlbum:
+        writer.writeByte(16);
+      case BaseItemKind.musicArtist:
+        writer.writeByte(17);
+      case BaseItemKind.musicGenre:
+        writer.writeByte(18);
+      case BaseItemKind.musicVideo:
+        writer.writeByte(19);
+      case BaseItemKind.person:
+        writer.writeByte(20);
+      case BaseItemKind.photo:
+        writer.writeByte(21);
+      case BaseItemKind.photoAlbum:
+        writer.writeByte(22);
+      case BaseItemKind.playlist:
+        writer.writeByte(23);
+      case BaseItemKind.playlistsFolder:
+        writer.writeByte(24);
+      case BaseItemKind.program:
+        writer.writeByte(25);
+      case BaseItemKind.recording:
+        writer.writeByte(26);
+      case BaseItemKind.season:
+        writer.writeByte(27);
+      case BaseItemKind.series:
+        writer.writeByte(28);
+      case BaseItemKind.studio:
+        writer.writeByte(29);
+      case BaseItemKind.trailer:
+        writer.writeByte(30);
+      case BaseItemKind.tvChannel:
+        writer.writeByte(31);
+      case BaseItemKind.tvProgram:
+        writer.writeByte(32);
+      case BaseItemKind.userRootFolder:
+        writer.writeByte(33);
+      case BaseItemKind.userView:
+        writer.writeByte(34);
+      case BaseItemKind.video:
+        writer.writeByte(35);
+      case BaseItemKind.year:
+        writer.writeByte(36);
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BaseItemKindAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
 class SortByAdapter extends TypeAdapter<SortBy> {
   @override
   final typeId = 37;
@@ -3253,7 +3520,7 @@ SessionInfo _$SessionInfoFromJson(Map json) => SessionInfo(
         ),
   remoteEndPoint: json['RemoteEndPoint'] as String?,
   playableMediaTypes: (json['PlayableMediaTypes'] as List<dynamic>?)
-      ?.map((e) => e as String)
+      ?.map((e) => $enumDecode(_$MediaTypeEnumMap, e))
       .toList(),
   playlistItemId: json['PlaylistItemId'] as String?,
   id: json['Id'] as String?,
@@ -3307,7 +3574,9 @@ Map<String, dynamic> _$SessionInfoToJson(
   'AdditionalUsers': instance.additionalUsers?.map((e) => e.toJson()).toList(),
   'Capabilities': instance.capabilities?.toJson(),
   'RemoteEndPoint': instance.remoteEndPoint,
-  'PlayableMediaTypes': instance.playableMediaTypes,
+  'PlayableMediaTypes': instance.playableMediaTypes
+      ?.map((e) => _$MediaTypeEnumMap[e]!)
+      .toList(),
   'PlaylistItemId': instance.playlistItemId,
   'Id': instance.id,
   'ServerId': instance.serverId,
@@ -3331,6 +3600,14 @@ Map<String, dynamic> _$SessionInfoToJson(
   'SupportsMediaControl': instance.supportsMediaControl,
   'NowPlayingQueue': instance.nowPlayingQueue?.map((e) => e.toJson()).toList(),
   'HasCustomDeviceName': instance.hasCustomDeviceName,
+};
+
+const _$MediaTypeEnumMap = {
+  MediaType.unknown: 'Unknown',
+  MediaType.audio: 'Audio',
+  MediaType.book: 'Book',
+  MediaType.photo: 'Photo',
+  MediaType.video: 'Video',
 };
 
 TranscodingInfo _$TranscodingInfoFromJson(Map json) => TranscodingInfo(
@@ -3376,7 +3653,7 @@ PlayerStateInfo _$PlayerStateInfoFromJson(Map json) => PlayerStateInfo(
   subtitleStreamIndex: (json['SubtitleStreamIndex'] as num?)?.toInt(),
   mediaSourceId: json['MediaSourceId'] as String?,
   playMethod: json['PlayMethod'] as String?,
-  repeatMode: json['RepeatMode'] as String?,
+  repeatMode: $enumDecodeNullable(_$RepeatModeEnumMap, json['RepeatMode']),
 );
 
 Map<String, dynamic> _$PlayerStateInfoToJson(PlayerStateInfo instance) =>
@@ -3390,8 +3667,14 @@ Map<String, dynamic> _$PlayerStateInfoToJson(PlayerStateInfo instance) =>
       'SubtitleStreamIndex': instance.subtitleStreamIndex,
       'MediaSourceId': instance.mediaSourceId,
       'PlayMethod': instance.playMethod,
-      'RepeatMode': instance.repeatMode,
+      'RepeatMode': _$RepeatModeEnumMap[instance.repeatMode],
     };
+
+const _$RepeatModeEnumMap = {
+  RepeatMode.repeatNone: 'RepeatNone',
+  RepeatMode.repeatAll: 'RepeatAll',
+  RepeatMode.repeatOne: 'RepeatOne',
+};
 
 SessionUserInfo _$SessionUserInfoFromJson(Map json) => SessionUserInfo(
   userId: json['UserId'] as String,
@@ -3403,7 +3686,7 @@ Map<String, dynamic> _$SessionUserInfoToJson(SessionUserInfo instance) =>
 
 ClientCapabilities _$ClientCapabilitiesFromJson(Map json) => ClientCapabilities(
   playableMediaTypes: (json['PlayableMediaTypes'] as List<dynamic>?)
-      ?.map((e) => e as String)
+      ?.map((e) => $enumDecode(_$MediaTypeEnumMap, e))
       .toList(),
   supportedCommands: (json['SupportedCommands'] as List<dynamic>?)
       ?.map((e) => e as String)
@@ -3421,7 +3704,9 @@ ClientCapabilities _$ClientCapabilitiesFromJson(Map json) => ClientCapabilities(
 
 Map<String, dynamic> _$ClientCapabilitiesToJson(ClientCapabilities instance) =>
     <String, dynamic>{
-      'PlayableMediaTypes': instance.playableMediaTypes,
+      'PlayableMediaTypes': instance.playableMediaTypes
+          ?.map((e) => _$MediaTypeEnumMap[e]!)
+          .toList(),
       'SupportedCommands': instance.supportedCommands,
       'SupportsMediaControl': instance.supportsMediaControl,
       'SupportsPersistentIdentifier': instance.supportsPersistentIdentifier,
@@ -3789,7 +4074,7 @@ BaseItemDto _$BaseItemDtoFromJson(Map json) => BaseItemDto(
     json['ParentId'],
     const BaseItemIdConverter().fromJson,
   ),
-  type: json['Type'] as String?,
+  type: $enumDecodeNullable(_$BaseItemKindEnumMap, json['Type']),
   people: (json['People'] as List<dynamic>?)
       ?.map((e) => BaseItemPerson.fromJson(Map<String, dynamic>.from(e as Map)))
       .toList(),
@@ -3868,7 +4153,7 @@ BaseItemDto _$BaseItemDtoFromJson(Map json) => BaseItemDto(
       ?.map((e) => ChapterInfo.fromJson(Map<String, dynamic>.from(e as Map)))
       .toList(),
   locationType: json['LocationType'] as String?,
-  mediaType: json['MediaType'] as String?,
+  mediaType: $enumDecodeNullable(_$MediaTypeEnumMap, json['MediaType']),
   endDate: json['EndDate'] as String?,
   lockedFields: (json['LockedFields'] as List<dynamic>?)
       ?.map((e) => e as String)
@@ -4002,7 +4287,7 @@ Map<String, dynamic> _$BaseItemDtoToJson(
       )
       case final value?)
     'ParentId': value,
-  if (instance.type case final value?) 'Type': value,
+  if (_$BaseItemKindEnumMap[instance.type] case final value?) 'Type': value,
   if (instance.people?.map((e) => e.toJson()).toList() case final value?)
     'People': value,
   if (instance.studios?.map((e) => e.toJson()).toList() case final value?)
@@ -4074,7 +4359,8 @@ Map<String, dynamic> _$BaseItemDtoToJson(
   if (instance.chapters?.map((e) => e.toJson()).toList() case final value?)
     'Chapters': value,
   if (instance.locationType case final value?) 'LocationType': value,
-  if (instance.mediaType case final value?) 'MediaType': value,
+  if (_$MediaTypeEnumMap[instance.mediaType] case final value?)
+    'MediaType': value,
   if (instance.endDate case final value?) 'EndDate': value,
   if (instance.lockedFields case final value?) 'LockedFields': value,
   if (instance.lockData case final value?) 'LockData': value,
@@ -4146,6 +4432,46 @@ Value? _$JsonConverterFromJson<Json, Value>(
   Object? json,
   Value? Function(Json json) fromJson,
 ) => json == null ? null : fromJson(json as Json);
+
+const _$BaseItemKindEnumMap = {
+  BaseItemKind.aggregateFolder: 'AggregateFolder',
+  BaseItemKind.audio: 'Audio',
+  BaseItemKind.audioBook: 'AudioBook',
+  BaseItemKind.basePluginFolder: 'BasePluginFolder',
+  BaseItemKind.book: 'Book',
+  BaseItemKind.boxSet: 'BoxSet',
+  BaseItemKind.channel: 'Channel',
+  BaseItemKind.channelFolderItem: 'ChannelFolderItem',
+  BaseItemKind.collectionFolder: 'CollectionFolder',
+  BaseItemKind.episode: 'Episode',
+  BaseItemKind.folder: 'Folder',
+  BaseItemKind.genre: 'Genre',
+  BaseItemKind.liveTvChannel: 'LiveTvChannel',
+  BaseItemKind.liveTvProgram: 'LiveTvProgram',
+  BaseItemKind.manualPlaylistsFolder: 'ManualPlaylistsFolder',
+  BaseItemKind.movie: 'Movie',
+  BaseItemKind.musicAlbum: 'MusicAlbum',
+  BaseItemKind.musicArtist: 'MusicArtist',
+  BaseItemKind.musicGenre: 'MusicGenre',
+  BaseItemKind.musicVideo: 'MusicVideo',
+  BaseItemKind.person: 'Person',
+  BaseItemKind.photo: 'Photo',
+  BaseItemKind.photoAlbum: 'PhotoAlbum',
+  BaseItemKind.playlist: 'Playlist',
+  BaseItemKind.playlistsFolder: 'PlaylistsFolder',
+  BaseItemKind.program: 'Program',
+  BaseItemKind.recording: 'Recording',
+  BaseItemKind.season: 'Season',
+  BaseItemKind.series: 'Series',
+  BaseItemKind.studio: 'Studio',
+  BaseItemKind.trailer: 'Trailer',
+  BaseItemKind.tvChannel: 'TvChannel',
+  BaseItemKind.tvProgram: 'TvProgram',
+  BaseItemKind.userRootFolder: 'UserRootFolder',
+  BaseItemKind.userView: 'UserView',
+  BaseItemKind.video: 'Video',
+  BaseItemKind.year: 'Year',
+};
 
 Json? _$JsonConverterToJson<Json, Value>(
   Value? value,
@@ -4543,7 +4869,7 @@ PlaybackProgressInfo _$PlaybackProgressInfoFromJson(Map json) =>
       playMethod: json['PlayMethod'] as String? ?? "DirectPlay",
       liveStreamId: json['LiveStreamId'] as String?,
       playSessionId: json['PlaySessionId'] as String?,
-      repeatMode: json['RepeatMode'] as String,
+      repeatMode: $enumDecode(_$RepeatModeEnumMap, json['RepeatMode']),
       playbackOrder: json['PlaybackOrder'] as String? ?? "Default",
       nowPlayingQueue: (json['NowPlayingQueue'] as List<dynamic>?)
           ?.map((e) => QueueItem.fromJson(Map<String, dynamic>.from(e as Map)))
@@ -4572,7 +4898,7 @@ Map<String, dynamic> _$PlaybackProgressInfoToJson(
   'PlaybackOrder': instance.playbackOrder,
   'LiveStreamId': instance.liveStreamId,
   'PlaySessionId': instance.playSessionId,
-  'RepeatMode': instance.repeatMode,
+  'RepeatMode': _$RepeatModeEnumMap[instance.repeatMode]!,
   'NowPlayingQueue': instance.nowPlayingQueue?.map((e) => e.toJson()).toList(),
   'PlaylistItemId': instance.playlistItemId,
 };
@@ -4701,7 +5027,7 @@ NewPlaylist _$NewPlaylistFromJson(Map json) => NewPlaylist(
       ?.map((e) => const BaseItemIdConverter().fromJson(e as String))
       .toList(),
   userId: json['UserId'] as String?,
-  mediaType: json['MediaType'] as String?,
+  mediaType: $enumDecodeNullable(_$MediaTypeEnumMap, json['MediaType']),
   isPublic: json['IsPublic'] as bool?,
 );
 
@@ -4710,7 +5036,7 @@ Map<String, dynamic> _$NewPlaylistToJson(NewPlaylist instance) =>
       'Name': instance.name,
       'Ids': instance.ids?.map(const BaseItemIdConverter().toJson).toList(),
       'UserId': instance.userId,
-      'MediaType': instance.mediaType,
+      'MediaType': _$MediaTypeEnumMap[instance.mediaType],
       'IsPublic': instance.isPublic,
     };
 

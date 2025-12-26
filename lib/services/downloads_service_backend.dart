@@ -1295,7 +1295,7 @@ class DownloadsSyncService {
       var childItems =
           await _jellyfinApiData.getItems(
             parentItem: item,
-            includeItemTypes: childFilter.jellyfinName,
+            includeItemTypes: childFilter.baseItemKind?.jellyfinName,
             sortBy: sortOrder,
             fields: fields,
           ) ??
@@ -1308,7 +1308,7 @@ class DownloadsSyncService {
         var trackChildItems =
             await _jellyfinApiData.getItems(
               parentItem: item,
-              includeItemTypes: BaseItemDtoType.track.jellyfinName,
+              includeItemTypes: BaseItemDtoType.track.baseItemKind?.jellyfinName,
               recursive: false,
               fields: "${_jellyfinApiData.defaultFields},MediaSources,MediaStreams,SortName",
             ) ??
@@ -1326,7 +1326,7 @@ class DownloadsSyncService {
         var artistTrackChildItems =
             await _jellyfinApiData.getItems(
               parentItem: item,
-              includeItemTypes: BaseItemDtoType.track.jellyfinName,
+              includeItemTypes: BaseItemDtoType.track.baseItemKind?.jellyfinName,
               filters: "Artist=${parent.name}",
               artistType: ArtistType.artist,
               fields: "${_jellyfinApiData.defaultFields},MediaSources,MediaStreams,SortName",
@@ -1423,7 +1423,7 @@ class DownloadsSyncService {
                 parentItem: (baseItemType == BaseItemDtoType.genre) ? collection.library! : item,
                 libraryFilter: (baseItemType == BaseItemDtoType.artist) ? collection.library! : null,
                 genreFilter: (baseItemType == BaseItemDtoType.genre) ? item : null,
-                includeItemTypes: BaseItemDtoType.album.jellyfinName,
+                includeItemTypes: BaseItemDtoType.album.baseItemKind?.jellyfinName,
                 fields: fields,
               ) ??
               [];
@@ -1436,7 +1436,7 @@ class DownloadsSyncService {
               await _jellyfinApiData.getItems(
                     parentItem: item,
                     libraryFilter: collection.library!,
-                    includeItemTypes: BaseItemDtoType.track.jellyfinName,
+                    includeItemTypes: BaseItemDtoType.track.baseItemKind?.jellyfinName,
                     filters: "Artist=${parent.name}",
                     artistType: ArtistType.artist,
                     fields: fields,

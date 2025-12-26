@@ -1,6 +1,7 @@
 import 'dart:core';
 
 import 'package:cast_plus/cast.dart';
+import 'package:finamp/models/google_cast_models.dart';
 import 'package:finamp/models/jellyfin_models.dart';
 import 'package:finamp/services/finamp_user_helper.dart';
 import 'package:finamp/services/jellyfin_api.dart';
@@ -16,132 +17,6 @@ const ticksPerSecond =
 final _jellyfinApiHelper = GetIt.instance<JellyfinApiHelper>();
 final _finampUserHelper = GetIt.instance<FinampUserHelper>();
 
-typedef CastMessagePayload = Map<String, dynamic>;
-
-enum JellyfinRepeatMode { all, one, none }
-
-// https://typescript-sdk.jellyfin.org/enums/generated-client.MediaType.html
-enum CastMediaType { audio, book, photo, video, unknown }
-
-// https://typescript-sdk.jellyfin.org/enums/generated-client.BaseItemKind.html
-// incomplete
-enum CastItemType {
-  audio,
-  folder,
-  manualPlaylistsFolder,
-  musicAlbum,
-  musicArtist,
-  musicGenre,
-  musicVideo,
-  playlist,
-  recording,
-}
-
-// https://github.com/jellyfin/jellyfin-web/blob/ed4417b7de88bce02992f0ab91cde230c05d9fed/src/plugins/chromecastPlayer/plugin.js#L306
-// https://typescript-sdk.jellyfin.org/interfaces/generated-client.BaseItemDto.html
-class CastMediaItem {
-  const CastMediaItem({
-    required this.id,
-    required this.serverId,
-    required this.name,
-    required this.type,
-    required this.mediaType,
-    required this.isFolder,
-  });
-
-  final String id;
-  final String serverId;
-  final String name;
-  final CastItemType type;
-  final CastMediaType mediaType;
-  final bool isFolder;
-
-  static String stringifyMediaType(CastMediaType castMediaType) {
-    switch (castMediaType) {
-      case CastMediaType.audio:
-        return "Audio";
-      case CastMediaType.book:
-        return "Book";
-      case CastMediaType.photo:
-        return "Photo";
-      case CastMediaType.video:
-        return "Video";
-      case CastMediaType.unknown:
-        return "Unknown";
-    }
-  }
-
-  static String stringifyType(CastItemType castItemType) {
-    switch (castItemType) {
-      case CastItemType.audio:
-        return "Audio";
-      case CastItemType.folder:
-        return "Folder";
-      case CastItemType.manualPlaylistsFolder:
-        return "ManualPlaylistsFolder";
-      case CastItemType.musicAlbum:
-        return "MusicAlbum";
-      case CastItemType.musicArtist:
-        return "MusicArtist";
-      case CastItemType.musicGenre:
-        return "MusicGenre";
-      case CastItemType.musicVideo:
-        return "MusicVideo";
-      case CastItemType.playlist:
-        return "Playlist";
-      case CastItemType.recording:
-        return "Recording";
-    }
-  }
-
-  CastMessagePayload toPayload() {
-    return {
-      "Id": id,
-      "ServerId": serverId,
-      "Name": name,
-      "Type": CastMediaItem.stringifyType(type),
-      "MediaType": CastMediaItem.stringifyMediaType(mediaType),
-      "IsFolder": isFolder,
-    };
-  }
-}
-
-class CastReceiverVolume {
-  const CastReceiverVolume({this.level, this.muted});
-  final double? level;
-  final bool? muted;
-  // ignored: stepInterval, controlType
-
-  CastMessagePayload toPayload() {
-    CastMessagePayload payload = {};
-    if (level != null) payload["level"] = level;
-    if (muted != null) payload["level"] = muted;
-    return payload;
-  }
-}
-
-class CastReceiverStatus {
-  const CastReceiverStatus({required this.volume});
-
-  /* null-safety: volume is always present
-     src: https://docs.rs/crate/gcast/0.1.5/source/PROTOCOL.md#256 */
-  CastReceiverStatus.fromPayload(CastMessagePayload payload)
-    : this(
-        volume: CastReceiverVolume(
-          level: payload["volume"]!["level"] as double,
-          muted: payload["volume"]!["muted"] as bool,
-        ),
-      );
-
-  final CastReceiverVolume volume;
-}
-
-extension GoogleCastDevice on CastDevice {
-  String get friendlyName => extras["fn"] ?? name;
-  String? get model => extras["md"];
-  String get id => serviceName;
-}
-
 class GoogleCast {
   final CastSessionManager _sessionManager = CastSessionManager();
   final Logger _logger = Logger("GoogleCast");
@@ -150,8 +25,8 @@ class GoogleCast {
   CastDevice? _device;
   CastSession? _session;
   PublicSystemInfoResult? _serverInfo;
-  Stream<CastMessagePayload>? _messageStream;
-  Stream<CastReceiverStatus>? _receiverStatusStream;
+  Stream<GoogleCastPayload>? _messageStream;
+  Stream<GoogleCastReceiverStatus>? _receiverStatusStream;
 
   bool get ready => _session?.state == CastSessionState.connected;
 
@@ -201,7 +76,7 @@ class GoogleCast {
     _session = await _sessionManager.startSession(targetDevice);
     _device = targetDevice;
 
-    Stream<CastMessagePayload> setupMessageStream(CastSession session) {
+    Stream<GoogleCastPayload> setupMessageStream(CastSession session) {
       session.messageStream.listen((message) {
         _logger.finest("<-- $message");
       });
@@ -209,11 +84,11 @@ class GoogleCast {
       return session.messageStream;
     }
 
-    Stream<CastReceiverStatus> setupReceiverStatusStream(CastSession session) async* {
+    Stream<GoogleCastReceiverStatus> setupReceiverStatusStream(CastSession session) async* {
       await for (final payload in session.messageStream) {
         if (payload["type"] != "RECEIVER_STATUS") continue;
 
-        yield CastReceiverStatus.fromPayload(payload["status"] as CastMessagePayload? ?? {});
+        yield GoogleCastReceiverStatus.fromJson(payload["status"] as GoogleCastPayload? ?? {});
       }
     }
 
@@ -241,7 +116,7 @@ class GoogleCast {
     _log("Launching app $_appId");
     sendControlMessage("LAUNCH", {"appId": _appId});
 
-    await for (CastMessagePayload payload in _session!.messageStream) {
+    await for (GoogleCastPayload payload in _session!.messageStream) {
       switch (payload["type"]) {
         case "LAUNCH_ERROR":
           final reason = payload["reason"] as String;
@@ -275,16 +150,16 @@ class GoogleCast {
     _log("Disconnected");
   }
 
-  Stream<CastMessagePayload> subscribeTo(String type) {
+  Stream<GoogleCastPayload> subscribeTo(String type) {
     if (_messageStream == null) throw "NOT_READY";
 
     return _messageStream!
         .where((payload) => payload["type"] == type)
-        .map((payload) => payload["data"] as CastMessagePayload? ?? const {});
+        .map((payload) => payload["data"] as GoogleCastPayload? ?? const {});
   }
 
   // null-safety: the volume in this stream will always have all fields set
-  Stream<CastReceiverVolume> subscribeVolume() {
+  Stream<GoogleCastReceiverVolume> subscribeVolume() {
     if (_receiverStatusStream == null) throw "NOT_READY";
     return _receiverStatusStream!.map((payload) => payload.volume);
   }
@@ -294,7 +169,7 @@ class GoogleCast {
   }
 
   // https://github.com/jellyfin/jellyfin-web/blob/948d792677b62ac5afe28813fed827c5e24b7090/src/plugins/chromecastPlayer/plugin.js#L323
-  void sendMessage(String command, [CastMessagePayload options = const {}]) {
+  void sendMessage(String command, [GoogleCastPayload options = const {}]) {
     if (!ready) {
       _logger.warning("Failed to send message: not ready");
       throw "NOT_READY";
@@ -306,7 +181,7 @@ class GoogleCast {
      */
     final user = _finampUserHelper.currentUser!;
 
-    CastMessagePayload payload = {
+    GoogleCastPayload payload = {
       "command": command,
       "options": options,
       "userId": user.id,
@@ -321,30 +196,30 @@ class GoogleCast {
     _sendMessage(messageNamespace, payload);
   }
 
-  void sendControlMessage(String type, [CastMessagePayload options = const {}]) {
+  void sendControlMessage(String type, [GoogleCastPayload options = const {}]) {
     _sendMessage(CastSession.kNamespaceReceiver, {"type": type, ...options});
   }
 
-  void _sendMessage(String namespace, CastMessagePayload payload) {
+  void _sendMessage(String namespace, GoogleCastPayload payload) {
     _logger.finest("--> [$namespace]: $payload");
     _session!.sendMessage(namespace, payload);
   }
 
   // 0 = muted
   void mute() {
-    return _setVolume(CastReceiverVolume(muted: true));
+    return _setVolume(GoogleCastReceiverVolume(muted: true));
   }
 
   void unmute([double? volumeLevel]) {
-    return _setVolume(CastReceiverVolume(muted: false, level: volumeLevel));
+    return _setVolume(GoogleCastReceiverVolume(muted: false, level: volumeLevel));
   }
 
   void setVolume(double level) {
-    return _setVolume(CastReceiverVolume(level: level));
+    return _setVolume(GoogleCastReceiverVolume(level: level));
   }
 
-  void _setVolume(CastReceiverVolume volume) {
-    final payload = volume.toPayload();
+  void _setVolume(GoogleCastReceiverVolume volume) {
+    final payload = volume.toJson();
     if (payload.isEmpty) return;
 
     return sendControlMessage("SET_VOLUME", {"volume": payload});
@@ -384,28 +259,28 @@ class GoogleCast {
     return sendMessage("Identify");
   }
 
-  void playNow(List<CastMediaItem> items) {
+  void playNow(List<GoogleCastMediaItem> items) {
     return _loadMedia("PlayNow", items);
   }
 
-  void playNext(List<CastMediaItem> items) {
+  void playNext(List<GoogleCastMediaItem> items) {
     return _loadMedia("PlayNext", items);
   }
 
-  void playLast(List<CastMediaItem> items) {
+  void playLast(List<GoogleCastMediaItem> items) {
     return _loadMedia("PlayLast", items);
   }
 
-  void shuffle(CastMediaItem item) {
+  void shuffle(GoogleCastMediaItem item) {
     return _loadMedia("Shuffle", [item]);
   }
 
-  void instantMix(CastMediaItem item) {
+  void instantMix(GoogleCastMediaItem item) {
     return _loadMedia("InstantMix", [item]);
   }
 
-  void _loadMedia(String command, List<CastMediaItem> items) {
-    return sendMessage(command, {"items": items.map((item) => item.toPayload())});
+  void _loadMedia(String command, List<GoogleCastMediaItem> items) {
+    return sendMessage(command, {"items": items.map((item) => item.toJson())});
   }
 
   void seek(double seconds) {
@@ -438,18 +313,8 @@ class GoogleCast {
     return sendMessage("PreviousTrack");
   }
 
-  void setRepeatMode(JellyfinRepeatMode repeatMode) {
-    late String payload;
-    // ref: https://typescript-sdk.jellyfin.org/enums/generated-client.RepeatMode.html
-    switch (repeatMode) {
-      case JellyfinRepeatMode.all:
-        payload = "RepeatAll";
-      case JellyfinRepeatMode.one:
-        payload = "RepeatOne";
-      case JellyfinRepeatMode.none:
-        payload = "RepeatNone";
-    }
-    return sendMessage("SetRepeatMode", {"RepeatMode": payload});
+  void setRepeatMode(RepeatMode repeatMode) {
+    return sendMessage("SetRepeatMode", {"RepeatMode": repeatMode.jellyfinName});
   }
 
   void _log(String message) {

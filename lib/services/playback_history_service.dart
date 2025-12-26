@@ -527,7 +527,7 @@ class PlaybackHistoryService {
             ? _currentTrack!.startTime.millisecondsSinceEpoch * 1000 * 10
             : null,
         volumeLevel: (FinampSettingsHelper.finampSettings.currentVolume * 100).round(),
-        repeatMode: _toJellyfinRepeatMode(_queueService.loopMode),
+        repeatMode: _queueService.loopMode.toJellyfin(),
         playMethod: item.item.extras?["shouldTranscode"] as bool? ?? false ? "Transcode" : "DirectPlay",
         playbackOrder: _queueService.playbackOrder == FinampPlaybackOrder.shuffled ? "Shuffle" : "Default",
         nowPlayingQueue: getQueueToReport(includeNowPlayingQueue: includeNowPlayingQueue),
@@ -569,7 +569,7 @@ class PlaybackHistoryService {
         volumeLevel: (FinampSettingsHelper.finampSettings.currentVolume * 100).round(),
         playMethod: currentTrack.item.extras!["shouldTranscode"] as bool? ?? false ? "Transcode" : "DirectPlay",
         playbackOrder: _queueService.playbackOrder == FinampPlaybackOrder.shuffled ? "Shuffle" : "Default",
-        repeatMode: _toJellyfinRepeatMode(_queueService.loopMode),
+        repeatMode: _queueService.loopMode.toJellyfin(),
         nowPlayingQueue: getQueueToReport(includeNowPlayingQueue: includeNowPlayingQueue),
         playlistItemId: _queueService.getQueue().source.id,
       );
@@ -589,17 +589,6 @@ class PlaybackHistoryService {
       return queue;
     } else {
       return null;
-    }
-  }
-
-  String _toJellyfinRepeatMode(FinampLoopMode loopMode) {
-    switch (loopMode) {
-      case FinampLoopMode.all:
-        return "RepeatAll";
-      case FinampLoopMode.one:
-        return "RepeatOne";
-      case FinampLoopMode.none:
-        return "RepeatNone";
     }
   }
 }

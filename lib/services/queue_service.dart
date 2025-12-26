@@ -459,7 +459,7 @@ class QueueService {
             // Only id and type are really needed to fetch child items.  Full base item will be fetched later.
             final playlist = jellyfin_models.BaseItemDto(
               id: jellyfin_models.BaseItemId(source.id),
-              type: BaseItemDtoType.playlist.jellyfinName,
+              type: BaseItemDtoType.playlist.baseItemKind,
             );
             var itemList =
                 await _jellyfinApiHelper.getItems(
@@ -1387,7 +1387,7 @@ class QueueService {
     const uuid = Uuid();
 
     MediaItemId? itemId;
-    final tabContentType = TabContentType.fromItemType(item.type ?? "Audio");
+    final tabContentType = TabContentType.fromItemType(item.type ?? jellyfin_models.BaseItemKind.audio);
     bool isAndroidAutoOrMediaBrowserRequest = false;
 
     if (parentType != null) {

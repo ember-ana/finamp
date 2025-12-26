@@ -39,8 +39,8 @@ Future<(int, BaseItemDtoType)> itemAmount(
           libraryFilter: library,
           parentItem: baseItem,
           includeItemTypes: showTrackCountForArtists
-              ? BaseItemDtoType.track.jellyfinName
-              : BaseItemDtoType.album.jellyfinName,
+              ? BaseItemDtoType.track.baseItemKind?.jellyfinName
+              : BaseItemDtoType.album.baseItemKind?.jellyfinName,
           limit: 1,
           artistType: showTrackCountForArtists ? ArtistType.artist : ArtistType.albumArtist,
         );
@@ -68,7 +68,7 @@ Future<(int, BaseItemDtoType)> itemAmount(
           parentItem: library,
           genreFilter: baseItem,
           limit: 1,
-          includeItemTypes: BaseItemDtoType.album.jellyfinName,
+          includeItemTypes: BaseItemDtoType.album.baseItemKind?.jellyfinName,
         );
         itemCount = items.totalRecordCount;
       }

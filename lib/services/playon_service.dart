@@ -106,7 +106,7 @@ class PlayOnService {
           ClientCapabilities(
             supportsMediaControl: true,
             supportsPersistentIdentifier: true,
-            playableMediaTypes: ["Audio"],
+            playableMediaTypes: [MediaType.audio],
             supportedCommands: [
               "MoveUp",
               "MoveDown",

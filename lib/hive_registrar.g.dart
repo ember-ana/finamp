@@ -15,6 +15,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(AutoOfflineOptionAdapter());
     registerAdapter(BaseItemAdapter());
     registerAdapter(BaseItemDtoAdapter());
+    registerAdapter(BaseItemKindAdapter());
     registerAdapter(BaseItemPersonAdapter());
     registerAdapter(ClientCapabilitiesAdapter());
     registerAdapter(CodecProfileAdapter());
@@ -62,6 +63,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(MediaItemParentTypeAdapter());
     registerAdapter(MediaSourceInfoAdapter());
     registerAdapter(MediaStreamAdapter());
+    registerAdapter(MediaTypeAdapter());
     registerAdapter(MediaUrlAdapter());
     registerAdapter(MultichannelHandlingSettingAdapter());
     registerAdapter(NameIdPairAdapter());
@@ -85,6 +87,7 @@ extension HiveRegistrar on HiveInterface {
     registerAdapter(RadioModeAdapter());
     registerAdapter(RawThemeResultAdapter());
     registerAdapter(ReleaseDateFormatAdapter());
+    registerAdapter(RepeatModeAdapter());
     registerAdapter(ResponseProfileAdapter());
     registerAdapter(SavedQueueStateAdapter());
     registerAdapter(ScreenSizeAdapter());
@@ -117,6 +120,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(AutoOfflineOptionAdapter());
     registerAdapter(BaseItemAdapter());
     registerAdapter(BaseItemDtoAdapter());
+    registerAdapter(BaseItemKindAdapter());
     registerAdapter(BaseItemPersonAdapter());
     registerAdapter(ClientCapabilitiesAdapter());
     registerAdapter(CodecProfileAdapter());
@@ -164,6 +168,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(MediaItemParentTypeAdapter());
     registerAdapter(MediaSourceInfoAdapter());
     registerAdapter(MediaStreamAdapter());
+    registerAdapter(MediaTypeAdapter());
     registerAdapter(MediaUrlAdapter());
     registerAdapter(MultichannelHandlingSettingAdapter());
     registerAdapter(NameIdPairAdapter());
@@ -187,6 +192,7 @@ extension IsolatedHiveRegistrar on IsolatedHiveInterface {
     registerAdapter(RadioModeAdapter());
     registerAdapter(RawThemeResultAdapter());
     registerAdapter(ReleaseDateFormatAdapter());
+    registerAdapter(RepeatModeAdapter());
     registerAdapter(ResponseProfileAdapter());
     registerAdapter(SavedQueueStateAdapter());
     registerAdapter(ScreenSizeAdapter());

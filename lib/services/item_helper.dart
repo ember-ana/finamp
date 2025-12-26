@@ -67,7 +67,7 @@ Future<List<BaseItemDto>> loadChildTracksFromBaseItem({required BaseItemDto base
       case BaseItemDtoType.genre:
         newItemsFuture = jellyfinApiHelper.getItems(
           parentItem: finampUserHelper.currentUser?.currentView,
-          includeItemTypes: [BaseItemDtoType.track.jellyfinName].join(","),
+          includeItemTypes: [BaseItemDtoType.track.baseItemKind].join(","),
           limit: FinampSettingsHelper.finampSettings.trackShuffleItemCount,
           genreFilter: baseItem,
           sortBy: "Random", // important, as we load limited tracks and otherwise would always get the same
@@ -76,7 +76,7 @@ Future<List<BaseItemDto>> loadChildTracksFromBaseItem({required BaseItemDto base
       default:
         newItemsFuture = jellyfinApiHelper.getItems(
           parentItem: baseItem,
-          includeItemTypes: [BaseItemDtoType.track.jellyfinName].join(","),
+          includeItemTypes: [BaseItemDtoType.track.baseItemKind].join(","),
           sortBy: "ParentIndexNumber,IndexNumber,SortName",
           sortOrder: null,
           genreFilter: genreFilter,
@@ -210,7 +210,7 @@ Future<List<BaseItemDto>> loadChildTracksFromShuffledGenreAlbums({required BaseI
     List<BaseItemDto>? genreAlbums =
         await jellyfinApiHelper.getItems(
           parentItem: finampUserHelper.currentUser?.currentView,
-          includeItemTypes: [BaseItemDtoType.album.jellyfinName].join(","),
+          includeItemTypes: [BaseItemDtoType.album.baseItemKind].join(","),
           limit: albumLimit,
           genreFilter: baseItem,
           sortBy: "Random", // important, as we load limited albums and otherwise would always get the same
@@ -223,7 +223,7 @@ Future<List<BaseItemDto>> loadChildTracksFromShuffledGenreAlbums({required BaseI
     List<BaseItemDto>? newAlbumTracks =
         await jellyfinApiHelper.getItems(
           albumIds: albumIds,
-          includeItemTypes: [BaseItemDtoType.track.jellyfinName].join(","),
+          includeItemTypes: [BaseItemDtoType.track.baseItemKind].join(","),
           sortBy: "Album,ParentIndexNumber,IndexNumber,SortName",
           // here we fetch one additional track to later check if the last album fits perfectly in the limit or if it exceeds it and has to be removed:
           limit: totalTrackLimit + 1,

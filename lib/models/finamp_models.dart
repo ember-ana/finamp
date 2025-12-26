@@ -1074,17 +1074,17 @@ enum TabContentType {
     }
   }
 
-  static TabContentType fromItemType(String itemType) {
+  static TabContentType fromItemType(BaseItemKind? itemType) {
     switch (itemType) {
-      case "Audio":
+      case BaseItemKind.audio:
         return TabContentType.tracks;
-      case "MusicAlbum":
+      case BaseItemKind.musicAlbum:
         return TabContentType.albums;
-      case "MusicArtist":
+      case BaseItemKind.musicArtist:
         return TabContentType.artists;
-      case "MusicGenre":
+      case BaseItemKind.musicGenre:
         return TabContentType.genres;
-      case "Playlist":
+      case BaseItemKind.playlist:
         return TabContentType.playlists;
       default:
         throw const FormatException("Unsupported itemType");
@@ -1724,32 +1724,24 @@ enum DownloadItemStatus {
 /// Enumerated by Isar, do not modify order or delete existing entries
 enum BaseItemDtoType {
   noItem(null, true, null, null),
-  album("MusicAlbum", false, [track], DownloadItemType.collection),
-  artist("MusicArtist", true, [album, track], DownloadItemType.collection),
-  playlist("Playlist", true, [track], DownloadItemType.collection),
-  genre("MusicGenre", true, [album, track], DownloadItemType.collection),
-  track("Audio", false, [], DownloadItemType.track),
-  library("CollectionFolder", true, [album, track], DownloadItemType.collection),
-  folder("Folder", true, null, DownloadItemType.collection),
-  musicVideo("MusicVideo", false, [], DownloadItemType.track),
-  audioBook("AudioBook", false, [], DownloadItemType.track),
-  tvEpisode("Episode", false, [], DownloadItemType.track),
-  video("Video", false, [], DownloadItemType.track),
-  movie("Movie", false, [], DownloadItemType.track),
-  trailer("Trailer", false, [], DownloadItemType.track),
+  album(BaseItemKind.musicAlbum, false, [track], DownloadItemType.collection),
+  artist(BaseItemKind.musicArtist, true, [album, track], DownloadItemType.collection),
+  playlist(BaseItemKind.playlist, true, [track], DownloadItemType.collection),
+  genre(BaseItemKind.musicGenre, true, [album, track], DownloadItemType.collection),
+  track(BaseItemKind.audio, false, [], DownloadItemType.track),
+  library(BaseItemKind.collectionFolder, true, [album, track], DownloadItemType.collection),
+  folder(BaseItemKind.folder, true, null, DownloadItemType.collection),
+  musicVideo(BaseItemKind.musicVideo, false, [], DownloadItemType.track),
+  audioBook(BaseItemKind.audioBook, false, [], DownloadItemType.track),
+  tvEpisode(BaseItemKind.episode, false, [], DownloadItemType.track),
+  video(BaseItemKind.video, false, [], DownloadItemType.track),
+  movie(BaseItemKind.movie, false, [], DownloadItemType.track),
+  trailer(BaseItemKind.trailer, false, [], DownloadItemType.track),
   unknown(null, true, null, DownloadItemType.collection);
 
-  // All possible types in Jellyfin as of 10.9:
-  //"AggregateFolder" "Audio" "AudioBook" "BasePluginFolder" "Book" "BoxSet"
-  // "Channel" "ChannelFolderItem" "CollectionFolder" "Episode" "Folder" "Genre"
-  // "ManualPlaylistsFolder" "Movie" "LiveTvChannel" "LiveTvProgram" "MusicAlbum"
-  // "MusicArtist" "MusicGenre" "MusicVideo" "Person" "Photo" "PhotoAlbum" "Playlist"
-  // "PlaylistsFolder" "Program" "Recording" "Season" "Series" "Studio" "Trailer" "TvChannel"
-  // "TvProgram" "UserRootFolder" "UserView" "Video" "Year"
+  const BaseItemDtoType(this.baseItemKind, this.expectChanges, this.childTypes, this.downloadType);
 
-  const BaseItemDtoType(this.jellyfinName, this.expectChanges, this.childTypes, this.downloadType);
-
-  final String? jellyfinName;
+  final BaseItemKind? baseItemKind;
   final bool expectChanges;
   final List<BaseItemDtoType>? childTypes;
   final DownloadItemType? downloadType;
@@ -1762,25 +1754,25 @@ enum BaseItemDtoType {
   // the actual track type.  This may be a bad idea?
   static BaseItemDtoType fromItem(BaseItemDto item) {
     switch (item.type) {
-      case "Audio":
-      case "AudioBook":
-      case "MusicVideo":
-      case "Episode":
-      case "Video":
-      case "Movie":
-      case "Trailer":
+      case BaseItemKind.audio:
+      case BaseItemKind.audioBook:
+      case BaseItemKind.musicVideo:
+      case BaseItemKind.episode:
+      case BaseItemKind.video:
+      case BaseItemKind.movie:
+      case BaseItemKind.trailer:
         return track;
-      case "MusicAlbum":
+      case BaseItemKind.musicAlbum:
         return album;
-      case "MusicArtist":
+      case BaseItemKind.musicArtist:
         return artist;
-      case "MusicGenre":
+      case BaseItemKind.musicGenre:
         return genre;
-      case "Playlist":
+      case BaseItemKind.playlist:
         return playlist;
-      case "CollectionFolder":
+      case BaseItemKind.collectionFolder:
         return library;
-      case "Folder":
+      case BaseItemKind.folder:
         return folder;
       default:
         return unknown;
@@ -1871,7 +1863,29 @@ enum FinampLoopMode {
   @HiveField(1)
   one,
   @HiveField(2)
-  all,
+  all;
+
+  RepeatMode toJellyfin() {
+    switch (this) {
+      case FinampLoopMode.none:
+        return RepeatMode.repeatNone;
+      case FinampLoopMode.one:
+        return RepeatMode.repeatOne;
+      case FinampLoopMode.all:
+        return RepeatMode.repeatAll;
+    }
+  }
+
+  factory FinampLoopMode.fromJellyfin(RepeatMode repeatMode) {
+    switch (repeatMode) {
+      case RepeatMode.repeatNone:
+        return FinampLoopMode.none;
+      case RepeatMode.repeatOne:
+        return FinampLoopMode.one;
+      case RepeatMode.repeatAll:
+        return FinampLoopMode.all;
+    }
+  }
 }
 
 @HiveType(typeId: 52)
