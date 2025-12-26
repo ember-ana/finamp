@@ -10,9 +10,101 @@ import 'package:logging/logging.dart';
 
 const defaultCastAppId = "F007D354";
 const messageNamespace = "urn:x-cast:com.connectsdk";
-typedef CastMessagePayload = Map<String, dynamic>;
+const ticksPerSecond =
+    10000000; // ref: https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/helpers.ts#L43
+
 final _jellyfinApiHelper = GetIt.instance<JellyfinApiHelper>();
 final _finampUserHelper = GetIt.instance<FinampUserHelper>();
+
+typedef CastMessagePayload = Map<String, dynamic>;
+
+enum JellyfinRepeatMode { all, one, none }
+
+// https://typescript-sdk.jellyfin.org/enums/generated-client.MediaType.html
+enum CastMediaType { audio, book, photo, video, unknown }
+
+// https://typescript-sdk.jellyfin.org/enums/generated-client.BaseItemKind.html
+// incomplete
+enum CastItemType {
+  audio,
+  folder,
+  manualPlaylistsFolder,
+  musicAlbum,
+  musicArtist,
+  musicGenre,
+  musicVideo,
+  playlist,
+  recording,
+}
+
+// https://github.com/jellyfin/jellyfin-web/blob/ed4417b7de88bce02992f0ab91cde230c05d9fed/src/plugins/chromecastPlayer/plugin.js#L306
+// https://typescript-sdk.jellyfin.org/interfaces/generated-client.BaseItemDto.html
+class CastMediaItem {
+  const CastMediaItem({
+    required this.id,
+    required this.serverId,
+    required this.name,
+    required this.type,
+    required this.mediaType,
+    required this.isFolder,
+  });
+
+  final String id;
+  final String serverId;
+  final String name;
+  final CastItemType type;
+  final CastMediaType mediaType;
+  final bool isFolder;
+
+  static String stringifyMediaType(CastMediaType castMediaType) {
+    switch (castMediaType) {
+      case CastMediaType.audio:
+        return "Audio";
+      case CastMediaType.book:
+        return "Book";
+      case CastMediaType.photo:
+        return "Photo";
+      case CastMediaType.video:
+        return "Video";
+      case CastMediaType.unknown:
+        return "Unknown";
+    }
+  }
+
+  static String stringifyType(CastItemType castItemType) {
+    switch (castItemType) {
+      case CastItemType.audio:
+        return "Audio";
+      case CastItemType.folder:
+        return "Folder";
+      case CastItemType.manualPlaylistsFolder:
+        return "ManualPlaylistsFolder";
+      case CastItemType.musicAlbum:
+        return "MusicAlbum";
+      case CastItemType.musicArtist:
+        return "MusicArtist";
+      case CastItemType.musicGenre:
+        return "MusicGenre";
+      case CastItemType.musicVideo:
+        return "MusicVideo";
+      case CastItemType.playlist:
+        return "Playlist";
+      case CastItemType.recording:
+        return "Recording";
+    }
+  }
+
+  CastMessagePayload toPayload() {
+    return {
+      "Id": id,
+      "ServerId": serverId,
+      "Name": name,
+      "Type": CastMediaItem.stringifyType(type),
+      "MediaType": CastMediaItem.stringifyMediaType(mediaType),
+      "IsFolder": isFolder,
+    };
+  }
+}
 
 class GoogleCast {
   final CastSessionManager sessionManager = CastSessionManager();
@@ -54,6 +146,10 @@ class GoogleCast {
     /* serverInfo and deviceId are not required until we are sending messages,
        so they can be raced against getting the receiver ready here */
     await Future.wait([ensureServerInfo(), ensureDeviceId(), setupReceiver(targetDevice)]);
+
+    /* not sure why this is necessary
+       see: https://github.com/jellyfin/jellyfin-web/blob/ed4417b7de88bce02992f0ab91cde230c05d9fed/src/plugins/chromecastPlayer/plugin.js#L248 */
+    identify();
   }
 
   Future<void> _acquireSession(CastDevice targetDevice) async {
@@ -89,7 +185,7 @@ class GoogleCast {
 
   Future<void> _launch() async {
     _log("Launching app $appId");
-    _sendMessage(CastSession.kNamespaceReceiver, {"type": "LAUNCH", "appId": appId});
+    sendControlMessage("LAUNCH", {"appId": appId});
 
     await for (CastMessagePayload payload in session!.messageStream) {
       switch (payload["type"]) {
@@ -151,9 +247,142 @@ class GoogleCast {
     _sendMessage(messageNamespace, payload);
   }
 
+  void sendControlMessage(String type, [CastMessagePayload options = const {}]) {
+    _sendMessage(CastSession.kNamespaceReceiver, {"type": type, ...options});
+  }
+
   void _sendMessage(String namespace, CastMessagePayload payload) {
     _logger.finest("--> [$namespace]: $payload");
     session!.sendMessage(namespace, payload);
+  }
+
+  // 0 = muted
+  void mute() {
+    return _setVolume(muted: true);
+  }
+
+  void unmute([double? volumeLevel]) {
+    return _setVolume(muted: false, level: volumeLevel);
+  }
+
+  void setVolume(double level) {
+    return _setVolume(level: level);
+  }
+
+  void _setVolume({bool? muted, double? level}) {
+    CastMessagePayload payload = {};
+
+    if (muted != null) {
+      payload["muted"] = muted;
+    }
+    if (level != null) {
+      payload["level"] = level;
+    }
+    if (payload.isEmpty) return;
+
+    return sendControlMessage("SET_VOLUME", {"volume": payload});
+  }
+
+  /* command impl, full list here:
+     https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L27
+     [ ] DisplayContent
+     [x] Identify
+     [x] InstantMix
+     [!] Mute
+     [x] NextTrack
+     [x] Pause
+     [x] PlayLast
+     [x] PlayNext
+     [x] PlayNow
+     [x] PlayPause
+     [x] PreviousTrack
+     [x] Seek
+     [ ] SetAudioStreamIndex
+     [ ] SetRepeatMode
+     [ ] SetSubtitleStreamIndex
+     [!] SetVolume
+     [x] Shuffle
+     [x] Stop
+     [!] ToggleMute
+     [!] Unmute
+     [x] Unpause
+     [!] VolumeUp
+     [!] VolumeDown
+
+     ! volume is special and handled by google cast, not the receiver app,
+       so the impl for those is above
+   */
+
+  void identify() {
+    return sendMessage("Identify");
+  }
+
+  void playNow(List<CastMediaItem> items) {
+    return _loadMedia("PlayNow", items);
+  }
+
+  void playNext(List<CastMediaItem> items) {
+    return _loadMedia("PlayNext", items);
+  }
+
+  void playLast(List<CastMediaItem> items) {
+    return _loadMedia("PlayLast", items);
+  }
+
+  void shuffle(CastMediaItem item) {
+    return _loadMedia("Shuffle", [item]);
+  }
+
+  void instantMix(CastMediaItem item) {
+    return _loadMedia("InstantMix", [item]);
+  }
+
+  void _loadMedia(String command, List<CastMediaItem> items) {
+    return sendMessage(command, {"items": items.map((item) => item.toPayload())});
+  }
+
+  void seek(double seconds) {
+    /* this might be wrong? the ticks per second thing is weird
+       https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L155 */
+    return sendMessage("Seek", {"position": seconds});
+  }
+
+  void pause() {
+    return sendMessage("Pause");
+  }
+
+  void unpause() {
+    return sendMessage("Unpause");
+  }
+
+  void playPause() {
+    return sendMessage("PlayPause");
+  }
+
+  void stop() {
+    return sendMessage("Stop");
+  }
+
+  void nextTrack() {
+    return sendMessage("NextTrack");
+  }
+
+  void previousTrack() {
+    return sendMessage("PreviousTrack");
+  }
+
+  void setRepeatMode(JellyfinRepeatMode repeatMode) {
+    late String payload;
+    // ref: https://typescript-sdk.jellyfin.org/enums/generated-client.RepeatMode.html
+    switch (repeatMode) {
+      case JellyfinRepeatMode.all:
+        payload = "RepeatAll";
+      case JellyfinRepeatMode.one:
+        payload = "RepeatOne";
+      case JellyfinRepeatMode.none:
+        payload = "RepeatNone";
+    }
+    return sendMessage("SetRepeatMode", {"RepeatMode": payload});
   }
 
   void _log(String message) {
