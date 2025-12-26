@@ -77,8 +77,10 @@ class GoogleCast {
     _device = targetDevice;
 
     Stream<GoogleCastPayload> setupMessageStream(CastSession session) {
-      session.messageStream.listen((message) {
-        _logger.finest("<-- $message");
+      session.messageStream.listen((payload) {
+        if (payload["type"] == "error") _logger.warning("Received error: ${payload["message"]}");
+
+        _logger.finest("<-- $payload");
       });
 
       return session.messageStream;
@@ -163,6 +165,19 @@ class GoogleCast {
     if (_receiverStatusStream == null) throw "NOT_READY";
     return _receiverStatusStream!.map((payload) => payload.volume);
   }
+
+  // ref: https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/jellyfinActions.ts#L95
+  Stream<GoogleCastPlaybackProgress> subscribePlayback() {
+    if (_messageStream == null) throw "NOT_READY";
+    const playbackCommands = ["playbackprogress", "playbackstart", "playbackstop"];
+
+    // missing: playbackerror
+    return _messageStream!
+        .where((payload) => playbackCommands.contains(payload["type"]))
+        .map((payload) => GoogleCastPlaybackProgress.fromJson(payload["data"] as GoogleCastPayload));
+  }
+
+  // missing event types: repeatmodechange, volumechange, playstatechange
 
   bool isReadyOn(CastDevice device) {
     return ready && _device == device;
