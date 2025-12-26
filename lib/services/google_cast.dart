@@ -79,6 +79,7 @@ class GoogleCast {
     Stream<GoogleCastPayload> setupMessageStream(CastSession session) {
       session.messageStream.listen((payload) {
         if (payload["type"] == "error") _logger.warning("Received error: ${payload["message"]}");
+        if (payload["type"] == "playbackerror") _logger.warning("Playback error: ${payload["message"]}");
 
         _logger.finest("<-- $payload");
       });
@@ -169,15 +170,29 @@ class GoogleCast {
   // ref: https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/jellyfinActions.ts#L95
   Stream<GoogleCastPlaybackProgress> subscribePlayback() {
     if (_messageStream == null) throw "NOT_READY";
-    const playbackCommands = ["playbackprogress", "playbackstart", "playbackstop"];
+    const playbackCommands = [
+      // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/jellyfinActions.ts#L95
+      "playbackprogress",
+      // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/jellyfinActions.ts#L64
+      "playbackstart",
+      // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/jellyfinActions.ts#L124
+      "playbackstop",
+      // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/commandHandler.ts#L193
+      // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L323
+      "repeatmodechange",
+      // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L102
+      // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L351
+      "volumechange",
+      // pause: https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L79
+      // play: https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L90
+      // https://github.com/jellyfin/jellyfin-chromecast/blob/f8e263eaf02b57e495330f5022b0e6b58918928b/src/components/maincontroller.ts#L351
+      "playstatechange",
+    ];
 
-    // missing: playbackerror
     return _messageStream!
         .where((payload) => playbackCommands.contains(payload["type"]))
         .map((payload) => GoogleCastPlaybackProgress.fromJson(payload["data"] as GoogleCastPayload));
   }
-
-  // missing event types: repeatmodechange, volumechange, playstatechange
 
   bool isReadyOn(CastDevice device) {
     return ready && _device == device;
