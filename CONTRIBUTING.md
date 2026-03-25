@@ -240,6 +240,36 @@ Finamp uses Flutter `Shortcuts`/`Actions` under `lib/components/Shortcuts/`.
 Note:
 Handle `consumesKey` and `invoke` in the `CallbackAction` class for cases where text input is happening in a TextField for potentially conflicting shortcuts.
 
+### AirPlay / Google Cast
+
+Despite having the same purpose, these two work very differently, and therefore are implemented in very different ways:
+
+**AirPlay** usually works like:
+```
+            [ MEDIA SERVER ]
+          /
+      media
+      /
+     V
+[ SENDER ] -- media stream --> [ RECEIVER ]
+```
+
+Which means Finamp just plays back the audio like usual, but onto an output device that's actually on the network.
+
+**Google Cast** usually works like:
+```
+               [ MEDIA SERVER ]
+             /                  \
+           /                      \
+  media metadata              media stream
+      /                                \     
+     V                                  V
+[ SENDER ] -- control messages --> [ RECEIVER ]
+```
+
+In this case, Finamp acts more like a remote control than an audio player, exchanging commands with the receiver.
+Said receiver is running the [jellyfin-chromecast](https://github.com/jellyfin/jellyfin-chromecast) app, and [Finamp communicates using that app's control messages](lib/services/google_cast.dart).
+
 ## The Redesign
 
 The biggest main piece of work being done on Finamp at the moment is the redesign. The relevant meta-issue can be found [here](https://github.com/jmshrv/finamp/issues/220).  
